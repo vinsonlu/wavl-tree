@@ -168,7 +168,6 @@ class WAVLTree:
         size_helper(self.root)
         return count
 
-
     def contains(self, key):
         """
         Checks whether the tree contains the given key.
