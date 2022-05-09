@@ -3,6 +3,7 @@ import networkx as nx
 import random
 
 from collections import deque
+from timeit import default_timer as timer
 
 ### HELPER FOR VISUALIZATION
 
@@ -153,6 +154,20 @@ class WAVLTree:
             plt.show()
         else:
             print("Graph has no root!")
+
+    def size(self):
+        count = 0
+
+        def size_helper(node):
+            nonlocal count
+            if node is not None:
+                count += 1
+                size_helper(node.left)
+                size_helper(node.right)
+
+        size_helper(self.root)
+        return count
+
 
     def contains(self, key):
         """
@@ -637,20 +652,100 @@ class WAVLNode:
 
 ### TESTING
 
-def show_random_WAVLTree(size, deletions = 0):
+def random_WAVL_tree(size):
+    """
+    Creates a WAVL tree with size objects from 0 to size - 1,
+    inserted in random order.
+    
+    Inputs:
+        - size: the size of the WAVL tree to create
+
+    Returns: a WAVLTree object
+    """
     tree = WAVLTree()
-    insert = [i for i in range(size + deletions)]
+    insert = [i for i in range(size)]
     random.shuffle(insert)
+
     for num in insert:
         tree.insert(num)
 
-    deleted = []
-    for num in random.sample(insert, deletions):
-        tree.remove(num)
-        deleted.append(num)
+    return tree
 
+def random_delete(tree, size, count):
+    """
+    Randomly deletes count nodes from the WAVLTree of the given size.
+    Assumes that the WAVLTree has nodes numbered from 0 to size - 1.
+
+    Inputs:
+        - tree: the tree to operate on
+        - size: the size of the tree
+        - count: the number of nodes to remove
+    
+    Returns: a list of deleted nodes
+    """
+    deleted = []
+    for key in random.sample(list(range(size)), count):
+        deleted.append(key)
+        tree.pop(key)
+
+    return deleted
+
+def random_insert(tree, keys):
+    """
+    Shuffles then inserts a random list of keys.
+
+    Inputs:
+        - tree: the tree to operate on
+        - keys: the keys to insert, in random order
+
+    Returns: nothing
+    """
+    random.shuffle(keys)
+    for key in keys:
+        tree.insert(key)
+
+def run_experiment(final_size, cycle_max_size, cycle_min_size, cycles):
+    """
+    Runs the experiment. We do the following:
+        - Build up a graph of cycle_max_size using random_WAVL_tree()
+        - Every cycle (do this cycles times):
+            - Delete cycle_max_size - cycle_min_size random nodes
+            - Add them back in random order
+        - Finally, delete cycle_max_size - final_size nodes
+        - Print execution time and display graph
+
+    Inputs:
+        - final_size: the final size of the graph
+        - cycle_max_size: the size to build the graph to
+        - cycle_min_size: the target min size per insert-deletion cycle
+        - cycles: the amount of times to delete and insert nodes
+
+    Returns: nothing
+    """
+    start = timer()
+    tree = random_WAVL_tree(cycle_max_size)
+
+    for i in range(cycles):
+        deleted = random_delete(tree, cycle_max_size, cycle_max_size - cycle_min_size)
+        random_insert(tree, deleted)
+
+    random_delete(tree, cycle_max_size, cycle_max_size - final_size)
+    end = timer()
+
+    print("Total time: ", end - start)
+    print("\n===\n")
     tree.display()
 
-show_random_WAVLTree(50)
-show_random_WAVLTree(50, 150)
-show_random_WAVLTree(200, 800)
+# Part 1: visually verifying balance
+random_WAVL_tree(20).display()
+random_WAVL_tree(50).display()
+
+# Part 2: Performance
+print("Test 1: 10000 insertions and deletions")
+run_experiment(20, 10200, 20, 0)
+
+print("Test 2: 1000 insertions, then 10 size-200 insert-delete cycles")
+run_experiment(20, 1020, 820, 10)
+
+print("Test 3: 100000 insertions, then 20 size-10000 insert-delete cycles")
+run_experiment(20, 100020, 90020, 20)
